@@ -2,7 +2,8 @@
   "name": "chat-app-go-vue",
   "version": "1.0.0",
   "scripts": {
-    "dev": "nx run-many -t dev --parallel --output-style stream"
+    "dev": "nx run-many -t dev --parallel --output-style stream",
+    "infra": "docker compose -f ./deployment/docker-compose.yaml --profile infra up -d"
   },
   "keywords": [],
   "author": "",
