@@ -1,0 +1,10 @@
+{
+    "$schema": "./node_modules/nx/schemas/nx-schema.json",
+    "targetDefaults": {
+        "test": {
+            "dependsOn": ["^build"],
+            "cache": true
+        }
+    },
+    "defaultBase": "main"
+}
