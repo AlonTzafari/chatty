@@ -5,6 +5,8 @@ go 1.22.1
 require (
 	github.com/gofiber/contrib/websocket v1.3.2
 	github.com/gofiber/fiber/v2 v2.52.5
+	github.com/lib/pq v1.10.9
+	golang.org/x/crypto v0.21.0
 )
 
 require (
