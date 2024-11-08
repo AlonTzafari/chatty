@@ -26,6 +26,7 @@ func Authentication(app *fiber.App, db *sql.DB) {
 	app.Post("/api/login", loginHandler(db))
 	app.Post("/api/register", registerHandler(db))
 	app.Post("/api/logout", logoutHandler(db))
+	app.Get("/api/.me", meHandler(db))
 }
 
 func AuthMiddleware(db *sql.DB) fiber.Handler {
@@ -131,5 +132,20 @@ func logoutHandler(db *sql.DB) func(*fiber.Ctx) error {
 		}
 		c.ClearCookie("session")
 		return c.SendStatus(http.StatusOK)
+	}
+}
+func meHandler(db *sql.DB) func(*fiber.Ctx) error {
+	return func(c *fiber.Ctx) error {
+		auth, ok := c.Locals("auth").(AuthCtx)
+		if !ok {
+			return c.JSON(nil)
+		}
+		row := db.QueryRow(`SELECT username FROM users WHERE id = $1`, auth.UserId)
+		var username string
+		err := row.Scan(&username)
+		if err != nil {
+			return c.JSON(nil)
+		}
+		return c.JSON(User{Id: auth.UserId, Username: username})
 	}
 }

@@ -40,6 +40,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer db.Close()
 	app := fiber.New()
 	app.Use(cors.New())
 	app.Use(LoggerMiddleware)
