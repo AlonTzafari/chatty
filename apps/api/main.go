@@ -45,6 +45,8 @@ func main() {
 	app.Use(cors.New())
 	app.Use(LoggerMiddleware)
 	Authentication(app, db)
+	Channels(app, db)
+	Users(app, db)
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.

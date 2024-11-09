@@ -2,11 +2,22 @@
 import { useAuthStore } from '@/stores/auth';
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
-import { ref } from 'vue'; 
+import { onMounted, ref } from 'vue'; 
 import { useRouter,RouterLink } from 'vue-router';
 const authStore = useAuthStore()
 const router = useRouter()
 const loading = ref(false)
+const channels = ref<{Id: string, Name: string}[]>([])
+
+onMounted(async () => {
+    try {
+        const res = await fetch(`/api/channels?user_id=${authStore.user?.Id}`)
+        channels.value = await res.json()
+    } catch(e) {
+        console.error(e)
+    }
+})
+
 async function logout() {
     loading.value = true
     try {
@@ -27,6 +38,9 @@ async function logout() {
     </header>
   <main>
     <RouterLink class="create-channel" to="/create-channel"><Button>+</Button></RouterLink>
+    <div v-for="channel of channels" :key="channel.Id">
+        {{ channel.Name }}
+    </div>
   </main>
 </template>
 <style scoped>

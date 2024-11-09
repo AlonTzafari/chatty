@@ -1,28 +1,61 @@
 <script setup lang="ts">
 import InputText from 'primevue/inputtext';
+import AutoComplete from 'primevue/autocomplete';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
 import Card from 'primevue/card';
-import {useAuthStore} from '@/stores/auth';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/auth';
 const authStore = useAuthStore()
 const router = useRouter()
 const name = ref('')
 const member = ref('')
+const members = ref<{Id: string, Username: string}[]>([])
+const searchResults = ref<{Id: string, Username: string}[]>([])
+const suggestions = computed(() => searchResults.value
+.filter(result => members.value.every(member => member.Id !== result.Id))
+.map(result => result.Username))
 const loading = ref(false)
-async function submit(e: Event) {
+async function searchUsers() {
+    try {
+        const res = await fetch(`/api/users?username=${member.value}`)
+        const users = await res.json()
+        searchResults.value = users ?? []
+    } catch(e) {
+        console.error(e)
+    }
+}
+
+function addMember() {
+    const memberToAdd = searchResults.value.find(result => result.Username === member.value)
+    if (memberToAdd == null) {
+        console.error(new Error('Failed to find user in search results'))
+        return
+    } 
+    members.value = [...members.value, memberToAdd]
+    member.value = ""
+}
+
+async function submit() {
     try {
         loading.value = true
-        const form = e.target as HTMLFormElement
-        const formData = new FormData(form)
-        await fetch('/api/login', {body: formData, method: 'post'})
-        const res = await fetch('/api/.me')
-        const me: {Id: string, Username: string} | null = await res.json()
-        authStore.user = me
-        if(me) {
-            router.push(router.currentRoute.value.query.from as string ?? '/')
+        const id = authStore.getUser?.Id
+        if(!id) {
+            throw new Error("NOT AUTHENTICATED")
         }
+        const data = {
+            name: name.value,
+            members: members.value.map(member => member.Id).concat(id)
+        }
+        await fetch('/api/channels', {
+            body: JSON.stringify(data), 
+            method: 'post', 
+            headers: {
+                "Content-Type": "application/json"
+            }
+        })
+        router.push('/')
     } catch(e) {
         console.error(e);
     }
@@ -40,23 +73,23 @@ async function submit(e: Event) {
                 </h1>
             </template>
             <template #content>
-                <form @submit.prevent="submit">
+                <form>
                     <FloatLabel variant="on">
                         <InputText id="name" name="name" v-model="name" required :disabled="loading"/>
                         <label for="name">name</label>
                     </FloatLabel>
                     <FloatLabel variant="on">
-                        <InputText id="member" name="member" v-model="member" required :disabled="loading"/>
-                        <Button>Add</Button>
+                        <AutoComplete id="member" name="member" v-model="member" :suggestions="suggestions" @complete="searchUsers" required :disabled="loading"/>
+                        <Button @click="addMember">Add</Button>
                     <label for="member">member</label>
                 </FloatLabel>
-                <Button class="button" type="submit" :disabled="loading">create</Button>
+                <Button class="button" @click="submit" :disabled="loading">create</Button>
             </form>
         </template>
         <template #footer>
-            <h2>
-                footer
-            </h2>
+            <div v-for="member of members" :key="member.Id">
+                {{ member.Username }}
+            </div>
         </template>
     </Card>
 </main>
