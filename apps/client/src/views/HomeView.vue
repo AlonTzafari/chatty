@@ -2,6 +2,7 @@
 import { useAuthStore } from '@/stores/auth';
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
+import Card from 'primevue/card'
 import { onMounted, ref } from 'vue'; 
 import { useRouter,RouterLink } from 'vue-router';
 const authStore = useAuthStore()
@@ -37,10 +38,10 @@ async function logout() {
         <i :class="`pi pi-sign-out clickable ${loading && 'disabled'}`" @click="!loading && logout()"></i>  
     </header>
   <main>
-    <RouterLink class="create-channel" to="/create-channel"><Button>+</Button></RouterLink>
-    <div v-for="channel of channels" :key="channel.Id">
-        {{ channel.Name }}
-    </div>
+    <RouterLink class="unset" to="/create-channel"><Button>+</Button></RouterLink>
+    <RouterLink class="unset clickable" v-for="channel of channels" :key="channel.Id" :to="`/channel/${channel.Id}`">
+        <Card><template #title>{{ channel.Name }}</template></Card>
+    </RouterLink>
   </main>
 </template>
 <style scoped>
@@ -68,7 +69,7 @@ async function logout() {
         align-items: center;
         padding: 1rem;
     }
-    .create-channel {
+    .unset {
         all: unset;
     }
 </style>

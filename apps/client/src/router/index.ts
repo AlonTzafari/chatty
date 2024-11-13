@@ -1,6 +1,20 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordInfo } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
 import { useAuthStore } from '@/stores/auth'
+
+interface RouteNamedMap {
+    channel: RouteRecordInfo<
+        'channel',
+        '/channel/:id',
+        {id: string},
+        {id: string}
+    >
+}
+declare module 'vue-router' {
+    interface TypesConfig {
+      RouteNamedMap: RouteNamedMap
+    }
+  }
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -8,7 +22,6 @@ const router = createRouter({
     {
       path: '/',
       name: 'home',
-      
       component: HomeView,
     },
     {
@@ -34,6 +47,14 @@ const router = createRouter({
       // this generates a separate chunk (About.[hash].js) for this route
       // which is lazy-loaded when the route is visited.
       component: () => import('../views/create-channel-view.vue')
+    },
+    {
+      path: '/channel/:id',
+      name: 'channel',
+      // route level code-splitting
+      // this generates a separate chunk (About.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import('../views/channel-view.vue'),
     },
   ]
 })

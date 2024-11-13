@@ -117,4 +117,44 @@ func Channels(app *fiber.App, db *sql.DB) {
 		}
 		return c.JSON(channels)
 	})
+	app.Get("/api/channels/:id", func(c *fiber.Ctx) error {
+		channelId := c.Params("id")
+		if channelId == "" {
+			return c.SendStatus(http.StatusBadRequest)
+		}
+		auth, ok := c.Locals("auth").(AuthCtx)
+		if !ok {
+			return c.SendStatus(http.StatusUnauthorized)
+		}
+		row := db.QueryRow(`
+			SELECT channel_id, user_id 
+			FROM channels_users 
+			WHERE channel_id = $1 
+			AND user_id = $2; 
+		`, channelId, auth.UserId)
+		err := row.Err()
+		if err != nil {
+			return c.SendStatus(http.StatusForbidden)
+		}
+		row = db.QueryRow(`
+			SELECT id, name, avatar, createdAt 
+			FROM channels 
+			WHERE id = $1; 
+		`, channelId)
+		var (
+			id        string
+			name      string
+			avatar    *string
+			createdAt string
+		)
+		err = row.Scan(&id, &name, &avatar, &createdAt)
+		if err != nil {
+			log.Println(err)
+			return c.SendStatus(http.StatusInternalServerError)
+		}
+		if avatar == nil {
+			avatar = new(string)
+		}
+		return c.JSON(Channel{id, name, *avatar, createdAt})
+	})
 }
