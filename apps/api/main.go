@@ -47,6 +47,7 @@ func main() {
 	Authentication(app, db)
 	Channels(app, db)
 	Users(app, db)
+	Messages(app, db)
 	app.Use("/ws", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
