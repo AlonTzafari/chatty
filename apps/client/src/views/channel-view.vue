@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button';
+import { wsClient } from '@/ws';
+type Message = {
+    Id: string, UserId: string, Content: string, CreatedAt: string, Username: string
+}
 const route = useRoute('channel')
 const channelInfo = ref<{Id: string, Name: string} | null>(null)
 const message = ref("")
-const messages = ref<{Id: string, UserId: string, Content: string, CreatedAt: string}[]>([])
+const messages = ref<Message[]>([])
 const disabled = computed(() => message.value === "")
+let unsub: () => void
 onMounted(async () => {
     try {
         console.log('route.params.id', route.params.id);
@@ -17,9 +22,15 @@ onMounted(async () => {
         ])
         channelInfo.value = await channelInfoRes.json()
         messages.value = await messagesRes.json()
+       unsub = wsClient.subscribe<Message>('message-updates', (data) => {
+            messages.value.push(data)
+        })
     } catch(e) {
         console.error(e)
     }
+})
+onUnmounted(() => {
+    unsub?.()
 })
 watch(
     () => route.params.id,

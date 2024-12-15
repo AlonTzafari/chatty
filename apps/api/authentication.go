@@ -82,7 +82,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if err != nil {
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		expiresAt := time.Now().UTC().Add(time.Millisecond * 1000 * 60 * 30)
+		expiresAt := time.Now().UTC().Add(time.Hour * 24)
 		row = db.QueryRow(`INSERT INTO sessions (userId, expiresAt) VALUES ($1, $2) RETURNING id;`, id, expiresAt.Format(time.RFC3339))
 		defer db.Exec(`DELETE FROM sessions WHERE expiresAt < $1;`, time.Now().UTC().Format(time.RFC3339))
 		var sessionId string
@@ -90,7 +90,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		c.Cookie(&fiber.Cookie{Name: "session", Value: sessionId, HTTPOnly: true})
+		c.Cookie(&fiber.Cookie{Name: "session", Value: sessionId, HTTPOnly: true, Expires: expiresAt})
 		return c.SendStatus(http.StatusOK)
 	}
 }

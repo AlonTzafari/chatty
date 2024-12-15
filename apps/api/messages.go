@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"time"
@@ -15,6 +16,11 @@ type Message struct {
 	UserId    string
 	Content   string
 	CreatedAt string
+}
+
+type MessageDisplay struct {
+	Message
+	Username string
 }
 
 type CreateMessageReq struct {
@@ -56,13 +62,17 @@ func Messages(app *fiber.App, db *sql.DB) {
 			log.Print("MESSAGE INSERT", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		// message := Message{
-		// 	messageId,
-		// 	createMessageReq.ChannelId,
-		// 	authCtx.UserId,
-		// 	createMessageReq.Content,
-		// 	now,
-		// }
+		msg, err := json.Marshal(Message{
+			messageId,
+			createMessageReq.ChannelId,
+			authCtx.UserId,
+			createMessageReq.Content,
+			now,
+		})
+		if err != nil {
+			return c.SendStatus(http.StatusInternalServerError)
+		}
+		defer PubsubClient.Send("message-updates", msg)
 		return c.Status(http.StatusCreated).JSON(struct {
 			Id string `json:"id"`
 		}{messageId})
@@ -86,8 +96,10 @@ func Messages(app *fiber.App, db *sql.DB) {
 		}
 
 		rows, err := db.Query(`
-			SELECT id, user_id, content, createdAt
+			SELECT messages.id, messages.user_id, messages.content, messages.createdAt, users.username
 			FROM messages
+			LEFT JOIN users
+			ON messages.user_id = users.id
 			WHERE channel_id = $1;
 		`, channelId)
 
@@ -95,20 +107,21 @@ func Messages(app *fiber.App, db *sql.DB) {
 			log.Println(err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		var messages []Message
+		var messages []MessageDisplay
 		for rows.Next() {
 			var (
 				id        string
 				userId    string
 				content   string
 				createdAt string
+				username  string
 			)
-			err := rows.Scan(&id, &userId, &content, &createdAt)
+			err := rows.Scan(&id, &userId, &content, &createdAt, &username)
 			if err != nil {
 				log.Println(err)
 				return c.SendStatus(http.StatusInternalServerError)
 			}
-			messages = append(messages, Message{id, channelId, userId, content, createdAt})
+			messages = append(messages, MessageDisplay{Message{id, channelId, userId, content, createdAt}, username})
 		}
 		return c.JSON(messages)
 	})
