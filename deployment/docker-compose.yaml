@@ -2,10 +2,13 @@ services:
   client:
     image: alontzafari/chatty-client:1.0.0
     restart: always
-    ports:
-      - 80:80
+    expose:
+      - 80
     environment:
       - API_HOST=api:8080
+    networks:
+      - ingress
+      - chat
   api:
     image: alontzafari/chatty-api:1.0.0
     restart: always
@@ -15,3 +18,8 @@ services:
     - DB_URI=${DB_URI}
     - PORT=8080
     - ADDRESS=0.0.0.0
+    networks:
+      - chat
+
+networks:
+  chat:
