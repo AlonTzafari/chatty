@@ -10,7 +10,10 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build --force",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts",
-    "test": "npm run type-check && npm run lint"
+    "test": "npm run type-check && npm run lint",
+    "docker-build": "docker build ../../ -f ./dockerfile -t alontzafari/chatty-client:$npm_package_version",
+    "docker-push": "docker push  alontzafari/chatty-client:$npm_package_version",
+    "docker-run": "docker run --name chatty-client --rm -p 80:80 -e API_HOST=127.0.0.1:8080 alontzafari/chatty-client:$npm_package_version"
   },
   "dependencies": {
     "@primevue/themes": "^4.0.7",

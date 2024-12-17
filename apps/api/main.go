@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -16,8 +18,20 @@ type User struct {
 }
 
 func main() {
-	connStr := "postgresql://root:password@localhost:5432/app?sslmode=disable"
-	db, err := sql.Open("postgres", connStr)
+	dbUri := os.Getenv("DB_URI")
+	port := os.Getenv("PORT")
+	address := os.Getenv("ADDRESS")
+	if dbUri == "" {
+		dbUri = "postgresql://root:password@localhost:5432/app?sslmode=disable"
+	}
+	if port == "" {
+		port = "8080"
+	}
+	if address == "" {
+		address = "127.0.0.1"
+	}
+
+	db, err := sql.Open("postgres", dbUri)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -34,5 +48,5 @@ func main() {
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.SendStatus(http.StatusOK)
 	})
-	log.Fatalln(app.Listen("127.0.0.1:8080"))
+	log.Fatalln(app.Listen(fmt.Sprintf("%v:%v", address, port)))
 }

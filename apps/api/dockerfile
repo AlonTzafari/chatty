@@ -1,0 +1,14 @@
+FROM golang:1.23.4-alpine3.20 AS pkg
+WORKDIR /app
+COPY . .
+RUN sh ./scripts/cp-pkg.sh
+FROM golang:1.23.4-alpine3.20 AS build
+WORKDIR /app
+COPY --from=pkg /app/.pkg /app
+RUN cd apps/api; go mod download
+COPY . .
+RUN cd apps/api; go build -o /app/dist/api
+FROM alpine:3.20
+WORKDIR /app
+COPY --from=build /app/dist/api /app/api
+CMD ["./api"]
