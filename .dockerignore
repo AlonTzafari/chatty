@@ -8,8 +8,9 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+**/node_modules
 .DS_Store
-dist
+**/dist
 dist-ssr
 coverage
 *.local
@@ -32,3 +33,5 @@ tmp
 *.tsbuildinfo
 .env
 .pkg
+.dockerignore
+**/dockerfile

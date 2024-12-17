@@ -1,28 +1,17 @@
 services:
-  postgres:
-    image: postgres:17.0-alpine3.20
+  client:
+    image: alontzafari/chatty-client:1.0.0
     restart: always
     ports:
-      - 5432:5432
+      - 80:80
     environment:
-    - POSTGRES_USER=root
-    - POSTGRES_PASSWORD=password
-    - POSTGRES_DB=app
-    profiles:
-      - infra
-    volumes:
-      - pg:/var/lib/postgresql/data
-  pgadmin:
-    image: dpage/pgadmin4:8.12.0
+      - API_HOST=api:8080
+  api:
+    image: alontzafari/chatty-api:1.0.0
     restart: always
-    ports:
-      - 5050:80
+    expose:
+      - 8080
     environment:
-      - PGADMIN_DEFAULT_EMAIL=alontzafari@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=password
-    profiles:
-      - infra
-    
-
-volumes:
-  pg: 
+    - DB_URI=${DB_URI}
+    - PORT=8080
+    - ADDRESS=0.0.0.0

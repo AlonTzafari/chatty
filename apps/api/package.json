@@ -4,7 +4,10 @@
   "scripts": {
     "start": "go run .",
     "dev": "API_KEY=secret air -c .air.toml",
-    "test": "go test ."
+    "test": "go test .",
+    "docker-build": "docker build ../../ -f ./dockerfile -t alontzafari/chatty-api:$npm_package_version",
+    "docker-push": "docker push  alontzafari/chatty-api:$npm_package_version",
+    "build": "go build -o dist/api"
   },
   "keywords": [],
   "author": "",
