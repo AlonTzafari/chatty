@@ -19,7 +19,7 @@ server {
     location / {
         root   /usr/share/nginx/html;
         index  index.html index.htm;
-        try_files $uri /usr/share/nginx/html/index.html;
+        try_files $uri $uri/ /index.html;
     }
 }
 
