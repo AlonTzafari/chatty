@@ -3,8 +3,6 @@ server {
     listen       [::]:80;
     server_name  _;
 
-    #access_log  /var/log/nginx/host.access.log  main;
-    error_log /var/log/nginx/error.log debug;
 
     location /api {
         proxy_pass http://${API_HOST};
@@ -21,6 +19,7 @@ server {
     location / {
         root   /usr/share/nginx/html;
         index  index.html index.htm;
+        try_files $uri /usr/share/nginx/html/index.html;
     }
 }
 
