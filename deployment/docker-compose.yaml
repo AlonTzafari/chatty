@@ -7,7 +7,6 @@ services:
     environment:
       - API_HOST=api:8080
     networks:
-      - ingress
       - chat
   api:
     image: alontzafari/chatty-api:1.0.0
@@ -23,3 +22,4 @@ services:
 
 networks:
   chat:
+    name: chat-network
