@@ -2,15 +2,77 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type Session struct {
+	Id        string
+	UserId    string
+	ExpiresAt time.Time
+}
+type SessionManager struct {
+	mu       sync.Mutex
+	sessions map[string]Session
+}
+
+var sm = &SessionManager{sessions: make(map[string]Session)}
+
+func (sm *SessionManager) GetSession(sessionId string) (Session, bool) {
+	sm.mu.Lock()
+	defer func() {
+		now := time.Now()
+		for k, v := range sm.sessions {
+			if now.After(v.ExpiresAt) {
+				delete(sm.sessions, k)
+			}
+		}
+		sm.mu.Unlock()
+	}()
+	session, ok := sm.sessions[sessionId]
+	if !ok {
+		return session, ok
+	}
+	now := time.Now()
+	if now.After(session.ExpiresAt) {
+		return Session{}, false
+	}
+	return session, true
+}
+func (sm *SessionManager) AddSession(userId string) (Session, error) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	sessionId := ""
+	for i := 0; i < 3; i++ {
+		uid, err := uuid.NewRandom()
+		if err != nil {
+			return Session{}, err
+		}
+		sessionId = uid.String()
+		_, ok := sm.sessions[sessionId]
+		if ok {
+			continue
+		}
+		session := Session{Id: sessionId, UserId: userId, ExpiresAt: time.Now().UTC().Add(time.Hour * 24)}
+		sm.sessions[sessionId] = session
+		return session, nil
+	}
+	return Session{}, fmt.Errorf("failed to add session")
+}
+func (sm *SessionManager) RemoveSession(sessionId string) {
+	sm.mu.Lock()
+	defer sm.mu.Unlock()
+	delete(sm.sessions, sessionId)
+}
 
 type AuthCtx struct {
 	UserId string
@@ -37,26 +99,31 @@ func AuthMiddleware(db *sql.DB) fiber.Handler {
 			c.Locals("auth", AuthCtx{apiKey[0]})
 			return c.Next()
 		}
-		session := c.Cookies("session")
-		if session == "" {
+		sessionId := c.Cookies("session")
+		if sessionId == "" {
 			return c.Next()
 		}
-		rows, err := db.Query("SELECT userId FROM sessions WHERE id = $1 AND expiresAt > $2", session, time.Now().UTC().Format(time.RFC3339))
-		if err != nil {
-			return c.Next()
-		}
-		isResult := rows.Next()
-		if !isResult {
+		// rows, err := db.Query("SELECT userId FROM sessions WHERE id = $1 AND expiresAt > $2", session, time.Now().UTC().Format(time.RFC3339))
+		// if err != nil {
+		// 	return c.Next()
+		// }
+		// isResult := rows.Next()
+		// if !isResult {
+		// 	c.ClearCookie("session")
+		// 	return c.Next()
+		// }
+		// var userId string
+		// err = rows.Scan(&userId)
+		// if err != nil {
+		// 	c.ClearCookie("session")
+		// 	return c.Next()
+		// }
+		session, ok := sm.GetSession(sessionId)
+		if !ok {
 			c.ClearCookie("session")
 			return c.Next()
 		}
-		var userId string
-		err = rows.Scan(&userId)
-		if err != nil {
-			c.ClearCookie("session")
-			return c.Next()
-		}
-		c.Locals("auth", AuthCtx{userId})
+		c.Locals("auth", AuthCtx{session.UserId})
 		return c.Next()
 	}
 }
@@ -82,15 +149,19 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if err != nil {
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		expiresAt := time.Now().UTC().Add(time.Hour * 24)
-		row = db.QueryRow(`INSERT INTO sessions (userId, expiresAt) VALUES ($1, $2) RETURNING id;`, id, expiresAt.Format(time.RFC3339))
-		defer db.Exec(`DELETE FROM sessions WHERE expiresAt < $1;`, time.Now().UTC().Format(time.RFC3339))
-		var sessionId string
-		err = row.Scan(&sessionId)
+		// expiresAt := time.Now().UTC().Add(time.Hour * 24)
+		// row = db.QueryRow(`INSERT INTO sessions (userId, expiresAt) VALUES ($1, $2) RETURNING id;`, id, expiresAt.Format(time.RFC3339))
+		// defer db.Exec(`DELETE FROM sessions WHERE expiresAt < $1;`, time.Now().UTC().Format(time.RFC3339))
+		// var sessionId string
+		// err = row.Scan(&sessionId)
+		// if err != nil {
+		// 	return c.SendStatus(http.StatusInternalServerError)
+		// }
+		session, err := sm.AddSession(id)
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		c.Cookie(&fiber.Cookie{Name: "session", Value: sessionId, HTTPOnly: true, Expires: expiresAt})
+		c.Cookie(&fiber.Cookie{Name: "session", Value: session.Id, HTTPOnly: true, Expires: session.ExpiresAt})
 		return c.SendStatus(http.StatusOK)
 	}
 }
@@ -126,10 +197,11 @@ func logoutHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if sessionId == "" {
 			return c.SendStatus(http.StatusOK)
 		}
-		_, err := db.Exec(`DELETE FROM sessions WHERE id = $1`, sessionId)
-		if err != nil {
-			return c.SendStatus(http.StatusInternalServerError)
-		}
+		// _, err := db.Exec(`DELETE FROM sessions WHERE id = $1`, sessionId)
+		// if err != nil {
+		// 	return c.SendStatus(http.StatusInternalServerError)
+		// }
+		sm.RemoveSession(sessionId)
 		c.ClearCookie("session")
 		return c.SendStatus(http.StatusOK)
 	}
