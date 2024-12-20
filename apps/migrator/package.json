@@ -2,7 +2,7 @@
   "name": "migrator",
   "version": "1.0.0",
   "scripts": {
-    "docker-build": "docker build ../../ -f ./dockerfile -t alontzafari/chatty-migrator:$npm_package_version",
+    "docker-build": "docker build . -t alontzafari/chatty-migrator:$npm_package_version",
     "docker-push": "docker push  alontzafari/chatty-migrator:$npm_package_version"
   }
 }
