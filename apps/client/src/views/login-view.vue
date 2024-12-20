@@ -2,6 +2,7 @@
 import InputText from 'primevue/inputtext';
 import Button from 'primevue/button';
 import FloatLabel from 'primevue/floatlabel';
+import Message from 'primevue/message';
 import Card from 'primevue/card';
 import {useAuthStore} from '@/stores/auth';
 import { ref } from 'vue';
@@ -10,15 +11,25 @@ const authStore = useAuthStore()
 const router = useRouter()
 const username = ref('')
 const password = ref('')
+const err = ref('')
 const loading = ref(false)
 async function submit(e: Event) {
+    err.value = ""
     try {
         loading.value = true
         const form = e.target as HTMLFormElement
         const formData = new FormData(form)
-        await fetch('/api/login', {body: formData, method: 'post'})
-        const res = await fetch('/api/.me')
-        const me: {Id: string, Username: string} | null = await res.json()
+        const loginRes = await fetch('/api/login', {body: formData, method: 'post'})
+        if(loginRes.status === 401) {
+            err.value = "wrong username or password"
+            throw new Error(loginRes.statusText)
+        }
+        if(!loginRes.ok) {
+            err.value = "login failed"
+            throw new Error(loginRes.statusText)
+        }
+        const meRes = await fetch('/api/.me')
+        const me: {Id: string, Username: string} | null = await meRes.json()
         authStore.user = me
         if(me) {
             router.push(router.currentRoute.value.query.from as string ?? '/')
@@ -49,6 +60,7 @@ async function submit(e: Event) {
                         <InputText id="password" name="password" type="password" v-model="password" required :disabled="loading"/>
                     <label for="password">password</label>
                 </FloatLabel>
+                <Message v-if="err.length > 0" severity="error">{{ err }}</Message>
                 <Button class="button" type="submit" :disabled="loading">login</Button>
             </form>
         </template>
@@ -79,9 +91,9 @@ async function submit(e: Event) {
         margin: auto;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         align-items: center;
         gap: 1.5rem;
-        height: 15rem;
+        height: 17rem;
     }
 </style>

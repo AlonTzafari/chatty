@@ -9,7 +9,7 @@ RUN npm ci
 COPY . .
 RUN npx nx build client
 FROM nginx:1.27.3-alpine3.20
-COPY ./apps/client/chat.conf.template /etc/nginx/templates/default.conf.template
+COPY ./apps/client/chat.conf /etc/nginx/templates/default.conf.template
 COPY --from=build /app/apps/client/dist /usr/share/nginx/html
 CMD ["nginx", "-g", "daemon off;"]
  

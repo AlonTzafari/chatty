@@ -18,7 +18,7 @@ const password2Valid = computed(() => {
 const loading = ref(false)
 async function submit(e: Event) {
     usernameErr.value = ''
-    usernameErr.value = ''
+    formErr.value = ''
     try {
         loading.value = true
         const form = e.target as HTMLFormElement
@@ -26,12 +26,13 @@ async function submit(e: Event) {
         const res = await fetch('/api/register', {body: formData, method: 'post'})
         if (res.ok) {
             router.push("/login")
+            loading.value = false
             return
         }
         if (res.status === 400) {
             const err = await res.json() as {Username: string, Password: string}
             usernameErr.value = err.Username
-            return
+            throw new Error(res.statusText)
         }
         formErr.value = 'register failed'
     } catch(e) {
@@ -55,16 +56,17 @@ async function submit(e: Event) {
                     <FloatLabel variant="on">
                         <InputText id="username" name="username" :invalid="usernameErr.length > 0" v-model="username" required :disabled="loading"/>
                             <Message v-if="usernameErr.length > 0"  severity="error" >{{ usernameErr }}</Message>
-                        <label for="username">username</label>
-                    </FloatLabel>
-                    <FloatLabel variant="on">
-                        <InputText id="password" name="password" type="password" v-model="password" required :disabled="loading"/>
-                        <label for="password">password</label>
-                    </FloatLabel>
-                    <FloatLabel variant="on">
-                        <InputText id="password2" name="password2" type="password" v-model="password2" required :disabled="loading"/>
-                        <label for="password2">confirm password</label>
-                    </FloatLabel>
+                            <label for="username">username</label>
+                        </FloatLabel>
+                        <FloatLabel variant="on">
+                            <InputText id="password" name="password" type="password" v-model="password" required :disabled="loading"/>
+                            <label for="password">password</label>
+                        </FloatLabel>
+                        <FloatLabel variant="on">
+                            <InputText id="password2" name="password2" type="password" v-model="password2" required :disabled="loading"/>
+                            <label for="password2">confirm password</label>
+                        </FloatLabel>
+                        <Message v-if="formErr.length > 0"  severity="error" >{{ formErr }}</Message>
                 <Button class="button" type="submit" :disabled="loading || !password2Valid">register</Button>
             </form>
         </template>

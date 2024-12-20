@@ -1,6 +1,6 @@
 services:
   client:
-    image: alontzafari/chatty-client:1.0.0
+    image: alontzafari/chatty-client:1.1.0
     pull_policy: always
     restart: always
     expose:
@@ -10,7 +10,7 @@ services:
     networks:
       - chat
   api:
-    image: alontzafari/chatty-api:1.0.0
+    image: alontzafari/chatty-api:1.1.0
     pull_policy: always
     restart: always
     expose:

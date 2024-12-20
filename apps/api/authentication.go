@@ -142,8 +142,11 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 			password string
 		)
 		err = row.Scan(&id, &password)
-		if err != nil {
+		if err == sql.ErrNoRows {
 			return c.SendStatus(http.StatusUnauthorized)
+		}
+		if err != nil {
+			return c.SendStatus(http.StatusInternalServerError)
 		}
 		err = bcrypt.CompareHashAndPassword([]byte(password), []byte(loginReq.Password))
 		if err != nil {
@@ -194,7 +197,7 @@ func registerHandler(db *sql.DB) func(*fiber.Ctx) error {
 		return c.SendStatus(http.StatusOK)
 	}
 }
-func logoutHandler(db *sql.DB) func(*fiber.Ctx) error {
+func logoutHandler(_ *sql.DB) func(*fiber.Ctx) error {
 	return func(c *fiber.Ctx) error {
 		sessionId := c.Cookies("session")
 		if sessionId == "" {
