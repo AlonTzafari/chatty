@@ -3,4 +3,4 @@ WORKDIR /app
 RUN go install github.com/pressly/goose/v3/cmd/goose@latest
 COPY . .
 RUN chmod +x ./migrate-db.sh
-CMD ["./migrate-db.sh"]
+CMD ["/app/migrate-db.sh"]
