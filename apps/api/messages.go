@@ -107,7 +107,7 @@ func Messages(app *fiber.App, db *sql.DB) {
 			log.Println(err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		var messages []MessageDisplay
+		var messages []MessageDisplay = []MessageDisplay{}
 		for rows.Next() {
 			var (
 				id        string

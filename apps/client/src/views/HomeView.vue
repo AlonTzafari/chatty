@@ -69,7 +69,4 @@ async function logout() {
         align-items: center;
         padding: 1rem;
     }
-    .unset {
-        all: unset;
-    }
 </style>

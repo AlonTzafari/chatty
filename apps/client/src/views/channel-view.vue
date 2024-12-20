@@ -21,7 +21,7 @@ onMounted(async () => {
             fetch(`/api/messages?channel_id=${route.params.id}`),
         ])
         channelInfo.value = await channelInfoRes.json()
-        messages.value = await messagesRes.json()
+        messages.value = await messagesRes.json() ?? []
        unsub = wsClient.subscribe<Message>('message-updates', (data) => {
             messages.value.push(data)
         })
@@ -96,9 +96,6 @@ async function sendMessage() {
         align-items: center;
         padding: 1rem 1rem;
 
-    }
-    .unset {
-        all: unset;
     }
     .clickable:hover {
         cursor: pointer;

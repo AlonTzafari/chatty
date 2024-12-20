@@ -53,9 +53,7 @@ async function submit(e: Event) {
             </form>
         </template>
         <template #footer>
-            <h2>
-                footer
-            </h2>
+            <RouterLink to="/register">register</RouterLink>
         </template>
     </Card>
 </main>

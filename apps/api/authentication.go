@@ -183,7 +183,10 @@ func registerHandler(db *sql.DB) func(*fiber.Ctx) error {
 			if e, ok := err.(*pq.Error); ok {
 				code := pq.ErrorCode("23505")
 				if e.Code == code {
-					return c.SendStatus(http.StatusUnauthorized)
+					return c.Status(http.StatusBadRequest).JSON(struct {
+						Username string
+						Password string
+					}{"username taken", ""})
 				}
 			}
 			return c.SendStatus(http.StatusInternalServerError)

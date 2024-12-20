@@ -41,6 +41,14 @@ const router = createRouter({
       component: () => import('../views/login-view.vue')
     },
     {
+      path: '/register',
+      name: 'register',
+      // route level code-splitting
+      // this generates a separate chunk (About.[hash].js) for this route
+      // which is lazy-loaded when the route is visited.
+      component: () => import('../views/register-view.vue')
+    },
+    {
       path: '/create-channel',
       name: 'createChannel',
       // route level code-splitting
@@ -59,7 +67,7 @@ const router = createRouter({
   ]
 })
 router.beforeEach(async (to, from, next) => {
-    if(to.path === '/login') {
+    if(to.path === '/login' || to.path === '/register') {
         return next() 
     }
     const authStore = useAuthStore()
