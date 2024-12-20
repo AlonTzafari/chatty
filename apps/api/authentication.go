@@ -133,6 +133,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		var loginReq LoginReq
 		err := c.BodyParser(&loginReq)
 		if err != nil || loginReq.Username == "" || loginReq.Password == "" {
+			log.Printf("Error parsing body: %v, body: %v", err, string(c.BodyRaw()))
 			return c.SendStatus(http.StatusBadRequest)
 		}
 		log.Printf("loginReq username: %v, password: %v", loginReq.Username, loginReq.Password)
@@ -143,13 +144,16 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		)
 		err = row.Scan(&id, &password)
 		if err == sql.ErrNoRows {
+			log.Printf("Error sql.ErrNoRows")
 			return c.SendStatus(http.StatusUnauthorized)
 		}
 		if err != nil {
+			log.Printf("Error QueryRow select user: %v", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 		err = bcrypt.CompareHashAndPassword([]byte(password), []byte(loginReq.Password))
 		if err != nil {
+			log.Printf("Error bcrypt.CompareHashAndPassword: %v", err)
 			return c.SendStatus(http.StatusUnauthorized)
 		}
 		// expiresAt := time.Now().UTC().Add(time.Hour * 24)
@@ -162,6 +166,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 		// }
 		session, err := sm.AddSession(id)
 		if err != nil {
+			log.Printf("Error sm.AddSession(%v): %v", id, err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 		c.Cookie(&fiber.Cookie{Name: "session", Value: session.Id, HTTPOnly: true, Expires: session.ExpiresAt})
