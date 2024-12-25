@@ -99,7 +99,7 @@ async function sendMessage() {
         height: calc(100% - 10rem);
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
+        justify-content: flex-start;
         align-items: stretch;
         overflow-y: scroll;
         gap: 1rem;
