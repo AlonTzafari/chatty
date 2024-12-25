@@ -32,7 +32,6 @@ func main() {
 	if address == "" {
 		address = "127.0.0.1"
 	}
-
 	db, err := sql.Open("postgres", dbUri)
 	if err != nil {
 		log.Fatal(err)
@@ -59,7 +58,9 @@ func main() {
 func printDBStats(db *sql.DB, ctx context.Context) {
 	for {
 		stats := db.Stats()
-		log.Printf("DB STATS %+v\n", stats)
+		if stats.WaitCount > 0 {
+			log.Printf("DB STATS %+v\n", stats)
+		}
 		select {
 		case <-ctx.Done():
 			return

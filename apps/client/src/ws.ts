@@ -60,7 +60,10 @@ export class WSClient {
         this.ws.close()
     }
     
-    public subscribe<K extends keyof TChannelMap>(channel: K, cb: (data: ChannelPayload<K>) => void): () => void {
+    public async subscribe<K extends keyof TChannelMap>(channel: K, cb: (data: ChannelPayload<K>) => void): Promise<() => void> {
+        if(this.ws.readyState !== WS.OPEN) {
+            await this.connect()
+        }
         const ws = this.ws
         let count = this.subCount.get(channel)
         if(count == null || count === 0) {
@@ -89,6 +92,7 @@ export class WSClient {
         return () => {
             const count = this.subCount.get(channel)
             if(count == null) {
+                this.subCount.set(channel, 0)
                 return
             }
             if(count === 1) {
@@ -98,13 +102,17 @@ export class WSClient {
                         topic: channel
                     }
                 }))
-                ws.removeEventListener('message', handler)
             }
             if(count >= 1) {
                 this.subCount.set(channel, count - 1)
             }
+            ws.removeEventListener('message', handler)
+            if ([...this.subCount.values()].every(channelSubCount => channelSubCount === 0)) {
+                this.close()
+            }
         }
     }
+
 }
 
 export const wsClient = new WSClient({url: '/api/ws'})

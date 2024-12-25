@@ -5,3 +5,7 @@ export async function me(signal: AbortSignal = AbortSignal.timeout(5000)) {
     const user = await res.json()
     return authSchema.nullable().parse(user)
 }
+
+export async function logout(signal: AbortSignal = AbortSignal.timeout(5000)) {
+    await fetch('/api/logout', {method: 'post', signal})
+}

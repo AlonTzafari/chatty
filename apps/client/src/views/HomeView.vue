@@ -1,28 +1,33 @@
 <script setup lang="ts">
+import { logout } from '@/api/auth';
+import { getUserChannels } from '@/api/channel';
+import type channelSchema from '@/schemas/channel-schema';
 import { useAuthStore } from '@/stores/auth';
 import Avatar from 'primevue/avatar'
 import Button from 'primevue/button'
 import Card from 'primevue/card'
 import { onMounted, ref } from 'vue'; 
 import { useRouter,RouterLink } from 'vue-router';
+import type { z } from 'zod';
 const authStore = useAuthStore()
 const router = useRouter()
 const loading = ref(false)
-const channels = ref<{Id: string, Name: string}[]>([])
+const channels = ref<z.infer<typeof channelSchema>[]>([])
 
 onMounted(async () => {
     try {
-        const res = await fetch(`/api/channels?user_id=${authStore.user?.Id}`)
-        channels.value = await res.json()
+        if(authStore.user) {
+            channels.value = await getUserChannels(authStore.user.Id)
+        }
     } catch(e) {
         console.error(e)
     }
 })
 
-async function logout() {
+async function logoutHandler() {
     loading.value = true
     try {
-        await fetch('/api/logout', {method: 'post'})
+        await logout()
         router.push('/login')
     } catch(e) {
         console.error(e)
@@ -35,7 +40,7 @@ async function logout() {
     <header>
         <Avatar shape="circle" :label="authStore.user?.Username.charAt(0).toUpperCase()" size="large"/>
         <h1>channels</h1>
-        <i :class="`pi pi-sign-out clickable ${loading && 'disabled'}`" @click="!loading && logout()"></i>  
+        <i :class="`pi pi-sign-out clickable ${loading && 'disabled'}`" @click="!loading && logoutHandler()"></i>  
     </header>
   <main>
     <RouterLink class="unset" to="/create-channel"><Button>+</Button></RouterLink>

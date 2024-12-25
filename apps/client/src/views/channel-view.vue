@@ -35,7 +35,7 @@ onMounted(async () => {
         ])
         channelInfo.value = channelRes
         messages.value = messagesRes
-        unsub = wsClient.subscribe('message-updates', (data) => {
+        unsub = await wsClient.subscribe('message-updates', (data) => {
             const i = messages.value.findIndex(msg => msg.Id === data.Id)
             if(i === -1) {
                 messages.value.push(data)
@@ -96,11 +96,11 @@ async function sendMessage() {
     }
     main {
         width: 100%;
-        height: calc(100% - 10em);
+        height: calc(100% - 10rem);
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        flex-direction: column-reverse;
+        justify-content: flex-start;
+        align-items: stretch;
         overflow-y: scroll;
         gap: 1rem;
     }

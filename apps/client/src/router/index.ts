@@ -71,9 +71,11 @@ router.beforeEach(async (to, from, next) => {
         return next() 
     }
     const authStore = useAuthStore()
-    const user = await authStore.fetchUser()
-    if(user == null) {
-        next({path: '/login', query: {from: to.fullPath}})
+    if(authStore.user == null) {
+        await authStore.fetchUser()
+        if(!authStore.user) {
+            next({path: '/login', query: {from: to.fullPath}})
+        }
     } 
     return next()
 })
