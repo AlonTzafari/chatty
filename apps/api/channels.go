@@ -34,7 +34,7 @@ func Channels(app *fiber.App, db *sql.DB) {
 			log.Print(err)
 			return c.SendStatus(http.StatusBadRequest)
 		}
-		tx, err := db.Begin()
+		tx, err := db.BeginTx(c.Context(), &sql.TxOptions{})
 		if err != nil {
 			log.Print(err)
 			return c.SendStatus(http.StatusInternalServerError)
@@ -85,7 +85,7 @@ func Channels(app *fiber.App, db *sql.DB) {
 		if auth.UserId != userId {
 			return c.SendStatus(http.StatusForbidden)
 		}
-		rows, err := db.Query(`
+		rows, err := db.QueryContext(c.Context(), `
 			SELECT c.id, c.name, c.avatar, c.createdAt
 			FROM channels c
 			JOIN channels_users cu ON c.id = cu.channel_id
@@ -126,17 +126,26 @@ func Channels(app *fiber.App, db *sql.DB) {
 		if !ok {
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		row := db.QueryRow(`
-			SELECT channel_id, user_id 
-			FROM channels_users 
-			WHERE channel_id = $1 
-			AND user_id = $2; 
-		`, channelId, auth.UserId)
-		err := row.Err()
+		// row := db.QueryRowContext(c.Context(), `
+		// 	SELECT channel_id, user_id
+		// 	FROM channels_users
+		// 	WHERE channel_id = $1
+		// 	AND user_id = $2;
+		// `, channelId, auth.UserId)
+		// var (
+		// 	cid string
+		// 	uid string
+		// )
+		// err := row.Scan(&cid, &uid)
+		inChannel, err := isUserInChannel(auth.UserId, channelId, db, c.Context())
 		if err != nil {
+			fmt.Printf("ERROR isUserInChannel(%v, %v): %v\n", auth.UserId, channelId, err)
+			return c.SendStatus(http.StatusInternalServerError)
+		}
+		if !inChannel {
 			return c.SendStatus(http.StatusForbidden)
 		}
-		row = db.QueryRow(`
+		row := db.QueryRowContext(c.Context(), `
 			SELECT id, name, avatar, createdAt 
 			FROM channels 
 			WHERE id = $1; 

@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -36,7 +38,10 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
-	app := fiber.New()
+	db.SetMaxOpenConns(5)
+	db.SetConnMaxIdleTime(5)
+	go printDBStats(db, context.Background())
+	app := fiber.New(fiber.Config{WriteTimeout: 5 * time.Second})
 	app.Use(cors.New())
 	app.Use(LoggerMiddleware)
 	Authentication(app, db)
@@ -49,4 +54,17 @@ func main() {
 		return c.SendStatus(http.StatusOK)
 	})
 	log.Fatalln(app.Listen(fmt.Sprintf("%v:%v", address, port)))
+}
+
+func printDBStats(db *sql.DB, ctx context.Context) {
+	for {
+		stats := db.Stats()
+		log.Printf("DB STATS %+v\n", stats)
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			time.Sleep(5 * time.Second)
+		}
+	}
 }

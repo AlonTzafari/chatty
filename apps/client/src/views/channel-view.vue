@@ -1,52 +1,67 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, onUpdated, ref, useTemplateRef } from 'vue';
 import { useRoute } from 'vue-router';
 import Textarea from 'primevue/textarea'
 import Button from 'primevue/button';
 import { wsClient } from '@/ws';
-type Message = {
-    Id: string, UserId: string, Content: string, CreatedAt: string, Username: string
-}
+import { z } from 'zod';
+import type messageSchema from '@/schemas/message-schema';
+import { getChannel } from '@/api/channel';
+import { getMessagesByChannel, sendMessageToChannel } from '@/api/message';
+import type channelSchema from '@/schemas/channel-schema';
+import Message from '@/components/message-item.vue'
+import { useAuthStore } from '@/stores/auth';
+const auth = useAuthStore()
 const route = useRoute('channel')
-const channelInfo = ref<{Id: string, Name: string} | null>(null)
+const channelInfo = ref<z.infer<typeof channelSchema> | null>(null)
 const message = ref("")
-const messages = ref<Message[]>([])
+const messages = ref<z.infer<typeof messageSchema>[]>([])
 const disabled = computed(() => message.value === "")
+const main = useTemplateRef<HTMLElement>('main')
+const qScroll = ref(true)
 let unsub: () => void
+function scrollHandler(e: Event) {
+    if(e.target) {
+        const el = e.target as HTMLElement
+        const isBottom = el.scrollTop === (el.scrollHeight - el.clientHeight) 
+        qScroll.value = isBottom
+    }
+}
 onMounted(async () => {
     try {
-        console.log('route.params.id', route.params.id);
-        const [channelInfoRes, messagesRes] = await Promise.all([
-            fetch(`/api/channels/${route.params.id}`),
-            fetch(`/api/messages?channel_id=${route.params.id}`),
+        const [channelRes, messagesRes] = await Promise.all([
+            getChannel(route.params.id),
+            getMessagesByChannel(route.params.id),
         ])
-        channelInfo.value = await channelInfoRes.json()
-        messages.value = await messagesRes.json() ?? []
-       unsub = wsClient.subscribe<Message>('message-updates', (data) => {
-            messages.value.push(data)
+        channelInfo.value = channelRes
+        messages.value = messagesRes
+        unsub = wsClient.subscribe('message-updates', (data) => {
+            const i = messages.value.findIndex(msg => msg.Id === data.Id)
+            if(i === -1) {
+                messages.value.push(data)
+            } else {
+                messages.value.splice(i, 1, data)
+            }
         })
+        if(main.value) {
+            main.value.addEventListener('scroll', scrollHandler) 
+        } 
     } catch(e) {
         console.error(e)
     }
 })
+onUpdated(() => {
+    if(main.value && qScroll.value) {
+        main.value.scroll({behavior: 'instant', top: main.value.scrollHeight}) 
+    } 
+})
 onUnmounted(() => {
     unsub?.()
+    main.value?.removeEventListener('scroll', scrollHandler) 
 })
-watch(
-    () => route.params.id,
-    async (newId) => {
-        console.log('route.params.id', route.params.id, "newId", newId);
-    }
-)
 async function sendMessage() {
     try {
-        const data = {
-            channelId: route.params.id,
-            content: message.value,
-        }
-        await fetch('/api/messages', {method: 'post', body: JSON.stringify(data), headers: {
-            "Content-Type": "application/json"
-        }})
+        await sendMessageToChannel(route.params.id, message.value)
         message.value = ""
     } catch(e) {
         console.error(e)
@@ -61,8 +76,8 @@ async function sendMessage() {
             {{ channelInfo?.Name }}
         </h1>
     </header>
-    <main>
-        <div v-for="message of messages" :key="message.Id">{{ message.Content }}</div>
+    <main ref="main">
+        <Message v-for="message of messages" :key="message.Id" :message="message" :stick-end="message.UserId === auth.user?.Id"/>
     </main>
     <footer>
         <Textarea v-model="message" rows="1" cols="100" />
@@ -86,6 +101,8 @@ async function sendMessage() {
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        overflow-y: scroll;
+        gap: 1rem;
     }
     footer {
         height: 5rem;

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -18,6 +19,7 @@ import (
 type Session struct {
 	Id        string
 	UserId    string
+	Username  string
 	ExpiresAt time.Time
 }
 type SessionManager struct {
@@ -48,7 +50,7 @@ func (sm *SessionManager) GetSession(sessionId string) (Session, bool) {
 	}
 	return session, true
 }
-func (sm *SessionManager) AddSession(userId string) (Session, error) {
+func (sm *SessionManager) AddSession(userId string, username string) (Session, error) {
 	sm.mu.Lock()
 	defer sm.mu.Unlock()
 	sessionId := ""
@@ -62,7 +64,7 @@ func (sm *SessionManager) AddSession(userId string) (Session, error) {
 		if ok {
 			continue
 		}
-		session := Session{Id: sessionId, UserId: userId, ExpiresAt: time.Now().UTC().Add(time.Hour * 24)}
+		session := Session{Id: sessionId, UserId: userId, Username: username, ExpiresAt: time.Now().UTC().Add(time.Hour * 24)}
 		sm.sessions[sessionId] = session
 		return session, nil
 	}
@@ -75,7 +77,8 @@ func (sm *SessionManager) RemoveSession(sessionId string) {
 }
 
 type AuthCtx struct {
-	UserId string
+	UserId   string
+	Username string
 }
 
 type LoginReq struct {
@@ -96,34 +99,19 @@ func AuthMiddleware(db *sql.DB) fiber.Handler {
 		m := c.GetReqHeaders()
 		apiKey := m["X-Api-Key"]
 		if len(apiKey) == 1 && apiKey[0] != "" && apiKey[0] == os.Getenv("API_KEY") {
-			c.Locals("auth", AuthCtx{apiKey[0]})
+			c.Locals("auth", AuthCtx{apiKey[0], "API"})
 			return c.Next()
 		}
 		sessionId := c.Cookies("session")
 		if sessionId == "" {
 			return c.Next()
 		}
-		// rows, err := db.Query("SELECT userId FROM sessions WHERE id = $1 AND expiresAt > $2", session, time.Now().UTC().Format(time.RFC3339))
-		// if err != nil {
-		// 	return c.Next()
-		// }
-		// isResult := rows.Next()
-		// if !isResult {
-		// 	c.ClearCookie("session")
-		// 	return c.Next()
-		// }
-		// var userId string
-		// err = rows.Scan(&userId)
-		// if err != nil {
-		// 	c.ClearCookie("session")
-		// 	return c.Next()
-		// }
 		session, ok := sm.GetSession(sessionId)
 		if !ok {
 			c.ClearCookie("session")
 			return c.Next()
 		}
-		c.Locals("auth", AuthCtx{session.UserId})
+		c.Locals("auth", AuthCtx{session.UserId, session.Username})
 		return c.Next()
 	}
 }
@@ -137,7 +125,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 			return c.SendStatus(http.StatusBadRequest)
 		}
 		log.Printf("loginReq username: %v, password: %v", loginReq.Username, loginReq.Password)
-		row := db.QueryRow("SELECT id, password FROM users WHERE username = $1", loginReq.Username)
+		row := db.QueryRowContext(c.Context(), "SELECT id, password FROM users WHERE username = $1", loginReq.Username)
 		var (
 			id       string
 			password string
@@ -156,15 +144,7 @@ func loginHandler(db *sql.DB) func(*fiber.Ctx) error {
 			log.Printf("Error bcrypt.CompareHashAndPassword: %v", err)
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		// expiresAt := time.Now().UTC().Add(time.Hour * 24)
-		// row = db.QueryRow(`INSERT INTO sessions (userId, expiresAt) VALUES ($1, $2) RETURNING id;`, id, expiresAt.Format(time.RFC3339))
-		// defer db.Exec(`DELETE FROM sessions WHERE expiresAt < $1;`, time.Now().UTC().Format(time.RFC3339))
-		// var sessionId string
-		// err = row.Scan(&sessionId)
-		// if err != nil {
-		// 	return c.SendStatus(http.StatusInternalServerError)
-		// }
-		session, err := sm.AddSession(id)
+		session, err := sm.AddSession(id, loginReq.Username)
 		if err != nil {
 			log.Printf("Error sm.AddSession(%v): %v", id, err)
 			return c.SendStatus(http.StatusInternalServerError)
@@ -184,7 +164,9 @@ func registerHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		_, err = db.Exec(`
+		ctx, cancel := context.WithTimeout(c.Context(), 5000*time.Millisecond)
+		defer cancel()
+		_, err = db.ExecContext(ctx, `
 	INSERT INTO users (username, password) 
 	VALUES ($1, $2)`, registerReq.Username, string(hashed))
 		if err != nil {
@@ -208,10 +190,6 @@ func logoutHandler(_ *sql.DB) func(*fiber.Ctx) error {
 		if sessionId == "" {
 			return c.SendStatus(http.StatusOK)
 		}
-		// _, err := db.Exec(`DELETE FROM sessions WHERE id = $1`, sessionId)
-		// if err != nil {
-		// 	return c.SendStatus(http.StatusInternalServerError)
-		// }
 		sm.RemoveSession(sessionId)
 		c.ClearCookie("session")
 		return c.SendStatus(http.StatusOK)
@@ -223,7 +201,7 @@ func meHandler(db *sql.DB) func(*fiber.Ctx) error {
 		if !ok {
 			return c.JSON(nil)
 		}
-		row := db.QueryRow(`SELECT username FROM users WHERE id = $1`, auth.UserId)
+		row := db.QueryRowContext(c.Context(), `SELECT username FROM users WHERE id = $1`, auth.UserId)
 		var username string
 		err := row.Scan(&username)
 		if err != nil {

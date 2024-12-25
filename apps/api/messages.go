@@ -40,7 +40,7 @@ func Messages(app *fiber.App, db *sql.DB) {
 			log.Print(err)
 			return c.SendStatus(http.StatusBadRequest)
 		}
-		isInChannel, err := isUserInChannel(authCtx.UserId, createMessageReq.ChannelId, db)
+		isInChannel, err := isUserInChannel(authCtx.UserId, createMessageReq.ChannelId, db, c.Context())
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
@@ -49,7 +49,7 @@ func Messages(app *fiber.App, db *sql.DB) {
 		}
 
 		now := time.Now().UTC().Format(time.RFC3339)
-		row := db.QueryRow(
+		row := db.QueryRowContext(c.Context(),
 			`INSERT INTO messages (channel_id, user_id, content, createdAt) VALUES ($1, $2, $3, $4) RETURNING id;`,
 			createMessageReq.ChannelId,
 			authCtx.UserId,
@@ -62,13 +62,17 @@ func Messages(app *fiber.App, db *sql.DB) {
 			log.Print("MESSAGE INSERT", err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		msg, err := json.Marshal(Message{
-			messageId,
-			createMessageReq.ChannelId,
-			authCtx.UserId,
-			createMessageReq.Content,
-			now,
-		})
+		msg, err := json.Marshal(
+			MessageDisplay{
+				Message{
+					messageId,
+					createMessageReq.ChannelId,
+					authCtx.UserId,
+					createMessageReq.Content,
+					now,
+				},
+				authCtx.Username,
+			})
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
@@ -87,20 +91,20 @@ func Messages(app *fiber.App, db *sql.DB) {
 		if !ok {
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		isInChannel, err := isUserInChannel(auth.UserId, channelId, db)
+		isInChannel, err := isUserInChannel(auth.UserId, channelId, db, c.Context())
 		if err != nil {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 		if !isInChannel {
 			return c.SendStatus(http.StatusForbidden)
 		}
-
-		rows, err := db.Query(`
+		rows, err := db.QueryContext(c.Context(), `
 			SELECT messages.id, messages.user_id, messages.content, messages.createdAt, users.username
 			FROM messages
 			LEFT JOIN users
 			ON messages.user_id = users.id
-			WHERE channel_id = $1;
+			WHERE channel_id = $1
+			ORDER BY messages.createdAt ASC;
 		`, channelId)
 
 		if err != nil {
@@ -125,24 +129,4 @@ func Messages(app *fiber.App, db *sql.DB) {
 		}
 		return c.JSON(messages)
 	})
-}
-
-func isUserInChannel(userId string, channelId string, db *sql.DB) (bool, error) {
-	row := db.QueryRow(`
-			SELECT 1
-			FROM channels_users
-			WHERE channel_id = $1
-			AND user_id = $2;`,
-		channelId,
-		userId,
-	)
-	err := row.Err()
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		} else {
-			return false, err
-		}
-	}
-	return true, nil
 }

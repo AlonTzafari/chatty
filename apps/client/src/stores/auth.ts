@@ -1,3 +1,4 @@
+import { me } from '@/api/auth'
 import { defineStore } from 'pinia'
 
 export const useAuthStore = defineStore({
@@ -15,10 +16,8 @@ export const useAuthStore = defineStore({
             this.user = user
         },
         async fetchUser() {
-            const res = await fetch('/api/.me')
-            const user = await res.json()
-            this.user = user
-            return user
+            this.user = await me()
+            return this.user
         }
     }
 })
