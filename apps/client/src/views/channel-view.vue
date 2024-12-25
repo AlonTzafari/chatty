@@ -98,8 +98,8 @@ async function sendMessage() {
         width: 100%;
         height: calc(100% - 10rem);
         display: flex;
-        flex-direction: column-reverse;
-        justify-content: flex-start;
+        flex-direction: column;
+        justify-content: flex-end;
         align-items: stretch;
         overflow-y: scroll;
         gap: 1rem;
