@@ -1,23 +1,15 @@
 import { me } from '@/api/auth'
+import type authSchema from '@/schemas/auth-schema'
 import { defineStore } from 'pinia'
+import { ref } from 'vue'
+import type { z } from 'zod'
 
-export const useAuthStore = defineStore({
-    id: 'auth',
-    state: () => ({
-        user: null as {Id: string, Username: string} | null
-    }),
-    getters: {
-        getUser(state) {
-            return state.user
-        }
-    },
-    actions: {
-        setUser(user: {Id: string, Username: string} | null) {
-            this.user = user
-        },
-        async fetchUser() {
-            this.user = await me()
-            return this.user
-        }
+export const useAuthStore = defineStore('auth',() => {
+    const user = ref<z.infer<typeof authSchema> | null>(null)
+    const fetchUser = async () => {
+        const auth = await me()
+        user.value = auth 
+        return auth
     }
+    return {user, fetchUser}
 })

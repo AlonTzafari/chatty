@@ -13,13 +13,20 @@ const username = ref('')
 const password = ref('')
 const err = ref('')
 const loading = ref(false)
-async function submit(e: Event) {
+async function submit() {
     err.value = ""
     try {
         loading.value = true
-        const form = e.target as HTMLFormElement
-        const formData = new FormData(form)
-        const loginRes = await fetch('/api/login', {body: formData, method: 'post'})
+        const loginRes = await fetch('/api/login', {
+            body: JSON.stringify({
+                username: username.value, 
+                password: password.value
+            }),
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        })
         if(loginRes.status === 401) {
             err.value = "wrong username or password"
             throw new Error(loginRes.statusText)
@@ -61,7 +68,7 @@ async function submit(e: Event) {
                     <label for="password">password</label>
                 </FloatLabel>
                 <Message v-if="err.length > 0" severity="error">{{ err }}</Message>
-                <Button class="button" type="submit" :disabled="loading">login</Button>
+                <Button class="button" type="submit" :loading="loading">login</Button>
             </form>
         </template>
         <template #footer>
