@@ -11,6 +11,8 @@ import { getMessagesByChannel, sendMessageToChannel } from '@/api/message';
 import type channelSchema from '@/schemas/channel-schema';
 import Message from '@/components/message-item.vue'
 import { useAuthStore } from '@/stores/auth';
+import AppHeader from '@/components/app-header.vue';
+import { useChannelStore } from '@/stores/channel';
 const auth = useAuthStore()
 const route = useRoute('channel')
 const channelInfo = ref<z.infer<typeof channelSchema> | null>(null)
@@ -18,6 +20,7 @@ const message = ref("")
 const messages = ref<z.infer<typeof messageSchema>[]>([])
 const disabled = computed(() => message.value === "")
 const main = useTemplateRef<HTMLElement>('main')
+const channelStore = useChannelStore()
 const qScroll = ref(true)
 let unsub: () => void
 function scrollHandler(e: Event) {
@@ -33,6 +36,7 @@ onMounted(async () => {
             getChannel(route.params.id),
             getMessagesByChannel(route.params.id),
         ])
+        channelStore.setChannel(channelRes)
         channelInfo.value = channelRes
         messages.value = messagesRes
         unsub = await wsClient.subscribe('message-updates', (data) => {
@@ -70,12 +74,9 @@ async function sendMessage() {
 
 </script>
 <template>
-    <header>
-        <RouterLink class="unset clickable" to="/"><i class="pi pi-home" style="font-size: 2rem;"></i></RouterLink>
-        <h1>
-            {{ channelInfo?.Name }}
-        </h1>
-    </header>
+    <AppHeader>
+        {{ channelInfo?.Name }}
+    </AppHeader>
     <main ref="main">
         <Message v-for="message of messages" :key="message.Id" :message="message" :stick-end="message.UserId === auth.user?.Id"/>
     </main>
@@ -85,15 +86,6 @@ async function sendMessage() {
     </footer>
 </template>
 <style scoped>
-    header {
-        height: 5rem;
-        width: 100%;
-        border-bottom: 1px solid rgb(37, 35, 35);
-        display: flex;
-        gap: 2rem;
-        align-items: center;
-        padding: 1rem 1rem;
-    }
     main {
         width: 100%;
         height: calc(100% - 10rem);
@@ -103,6 +95,7 @@ async function sendMessage() {
         align-items: stretch;
         overflow-y: scroll;
         gap: 1rem;
+        padding: 1rem 1rem;
     }
     footer {
         height: 5rem;
@@ -112,12 +105,5 @@ async function sendMessage() {
         gap: 2rem;
         align-items: center;
         padding: 1rem 1rem;
-
-    }
-    .clickable:hover {
-        cursor: pointer;
-    }
-    .clickable:active {
-        cursor: auto;
     }
 </style>

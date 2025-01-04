@@ -1,14 +1,15 @@
 import { createRouter, createWebHistory, type RouteRecordInfo } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
+import HomeView from '../views/home-view.vue'
 import { useAuthStore } from '@/stores/auth'
 
 interface RouteNamedMap {
+    home: RouteRecordInfo<'home', '/'>;
     channel: RouteRecordInfo<
         'channel',
         '/channel/:id',
         {id: string},
         {id: string}
-    >
+    >;
 }
 declare module 'vue-router' {
     interface TypesConfig {
@@ -23,14 +24,6 @@ const router = createRouter({
       path: '/',
       name: 'home',
       component: HomeView,
-    },
-    {
-      path: '/about',
-      name: 'about',
-      // route level code-splitting
-      // this generates a separate chunk (About.[hash].js) for this route
-      // which is lazy-loaded when the route is visited.
-      component: () => import('../views/AboutView.vue')
     },
     {
       path: '/login',
@@ -74,7 +67,7 @@ router.beforeEach(async (to, from, next) => {
     if(authStore.user == null) {
         await authStore.fetchUser()
         if(!authStore.user) {
-            next({path: '/login', query: {from: to.fullPath}})
+            return next({path: '/login', query: {from: to.fullPath}})
         }
     } 
     return next()

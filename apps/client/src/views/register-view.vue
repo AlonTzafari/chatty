@@ -16,14 +16,22 @@ const password2Valid = computed(() => {
     return password.value === password2.value && password2.value.length > 0
 })
 const loading = ref(false)
-async function submit(e: Event) {
+async function submit() {
     usernameErr.value = ''
     formErr.value = ''
     try {
         loading.value = true
-        const form = e.target as HTMLFormElement
-        const formData = new FormData(form)
-        const res = await fetch('/api/register', {body: formData, method: 'post'})
+        const res = await fetch('/api/register', {
+            body: JSON.stringify({
+                username: username.value,
+                password: password.value
+            }), 
+            method: 'post',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+            
+        })
         if (res.ok) {
             router.push("/login")
             loading.value = false

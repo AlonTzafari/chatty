@@ -2,6 +2,7 @@
   "name": "api",
   "version": "1.1.0",
   "scripts": {
+    "postinstall": "go mod tidy",
     "start": "go run .",
     "dev": "API_KEY=secret air -c .air.toml",
     "test": "go test .",

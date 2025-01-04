@@ -40,7 +40,7 @@ function addMember() {
 async function submit() {
     try {
         loading.value = true
-        const id = authStore.getUser?.Id
+        const id = authStore.user?.Id
         if(!id) {
             throw new Error("NOT AUTHENTICATED")
         }

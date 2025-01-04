@@ -40,7 +40,12 @@ func Channels(app *fiber.App, db *sql.DB) {
 			return c.SendStatus(http.StatusInternalServerError)
 		}
 		defer tx.Rollback()
-		row := tx.QueryRow(`INSERT INTO channels (name, avatar, createdAt) VALUES ($1, $2, $3) RETURNING id;`, createChannelReq.Name, nil, time.Now().UTC().Format(time.RFC3339))
+		row := tx.QueryRow(
+			`INSERT INTO channels (name, avatar, createdAt) VALUES ($1, $2, $3) RETURNING id;`,
+			createChannelReq.Name,
+			nil,
+			time.Now().UTC().Format(time.RFC3339),
+		)
 		var channelId string
 		err = row.Scan(&channelId)
 		if err != nil {
@@ -96,7 +101,7 @@ func Channels(app *fiber.App, db *sql.DB) {
 			log.Println(err)
 			return c.SendStatus(http.StatusInternalServerError)
 		}
-		var channels []Channel
+		channels := []Channel{}
 		for rows.Next() {
 			var (
 				id        string
@@ -126,17 +131,6 @@ func Channels(app *fiber.App, db *sql.DB) {
 		if !ok {
 			return c.SendStatus(http.StatusUnauthorized)
 		}
-		// row := db.QueryRowContext(c.Context(), `
-		// 	SELECT channel_id, user_id
-		// 	FROM channels_users
-		// 	WHERE channel_id = $1
-		// 	AND user_id = $2;
-		// `, channelId, auth.UserId)
-		// var (
-		// 	cid string
-		// 	uid string
-		// )
-		// err := row.Scan(&cid, &uid)
 		inChannel, err := isUserInChannel(auth.UserId, channelId, db, c.Context())
 		if err != nil {
 			fmt.Printf("ERROR isUserInChannel(%v, %v): %v\n", auth.UserId, channelId, err)

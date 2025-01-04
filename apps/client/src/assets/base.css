@@ -5,8 +5,16 @@ html, body, #app {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     width: 100%;
     height: 100%;
+    --header-height: 5rem;
 }
 
 .unset {
     all: unset;
+}
+
+.clickable:hover {
+    cursor: pointer;
+}
+.clickable:active {
+    cursor: auto;
 }
