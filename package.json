@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "nx run-many -t dev --parallel --output-style stream",
-    "infra": "docker compose -f ./deployment/infra.yaml up -d"
+    "infra": "docker compose -f ./deployment/infra.yaml up -d",
+    "tidy": "nx run-many -t tidy --parallel --output-style stream"
   },
   "keywords": [],
   "author": "",
